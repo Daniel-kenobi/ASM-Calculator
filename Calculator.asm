@@ -46,11 +46,12 @@ section .data
    TamMensagemFinalizacao equ $ - MensagemFinalizacao
 
 section .bss
-    num1 resq 1
-    num2 resq 1
-    op resq 1
-    result resq 1
-
+    num1 resb 10
+    num2 resb 10
+    op resb 20
+    result resb 20
+    buffer resb 10
+    
 section .text
 
 global _start
@@ -89,8 +90,7 @@ _start:
 
     ; Comparo o numero de entrada para ver se é soma
     cmp eax, 1
-    call SomaDoisNumeros
-    jmp ImprimeResultado
+    je SomaDoisNumeros
 
     ; Comparo o numero de entrada para ver se é subtração
     cmp eax, 2
@@ -104,7 +104,7 @@ _start:
     cmp eax, 4
     je DivideDoisNumeros
 
-    ; Compara o numeor de entrada para ver se é opcode de saida
+    ; Compara o número de entrada para ver se é opcode para encerraro o processo saida
     cmp eax, 0x0
     je Saida
 
@@ -137,13 +137,16 @@ SomaDoisNumeros:
 
     add eax, ebx
     mov [result], eax
+
+    call ImprimeResultado
+    jmp Saida
     ret
 
 LerNumero1:
     mov eax, SYS_READ
     mov ebx, STD_IN
     mov ecx, num1
-    mov edx, 0xA ; Leio um numero de até 10 posições
+    mov edx, 0xA 
     int SYS_CALL
 
     mov edx, num1
@@ -199,6 +202,10 @@ ExibeMensagemInicial:
     ret
 
 ImprimeResultado:
+    lea esi, [buffer]
+    call int_to_string
+    mov [result], EAX
+
     mov EAX, SYS_WRITE
     mov EBX, STD_OUT
     mov ECX, MensagemResultado
@@ -242,3 +249,18 @@ StringToInt:
     jmp .top ; until done
 .done:
     ret
+
+int_to_string:
+  add esi, 9
+  mov byte [esi], NULL
+  mov ebx, 10         
+.next_digit:
+  xor edx,edx         ; Clear edx prior to dividing edx:eax by ebx
+  div ebx             ; eax /= 10
+  add dl,'0'          ; Convert the remainder to ASCII 
+  dec esi             ; store characters in reverse order
+  mov [esi],dl
+  test eax, eax            
+  jnz .next_digit     ; Repeat until eax==0
+  mov eax,esi
+  ret
